@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ARTHUR_CORE</title>
+    <style>
+        :root { --gold: #ffd700; --royal-blue: #002366; --glass: rgba(255, 255, 255, 0.1); }
+        body { 
+            background: #050505; color: var(--gold); 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; flex-direction: column; align-items: center; 
+            height: 100vh; margin: 0; overflow: hidden;
+        }
+
+        /* Animated Knight Core */
+        #core {
+            margin-top: 15%; width: 150px; height: 150px;
+            position: relative; display: flex; align-items: center; justify-content: center;
+        }
+        .orbit {
+            position: absolute; width: 100%; height: 100%;
+            border: 2px solid var(--gold); border-radius: 50%;
+            border-top-color: transparent; animation: spin 2s linear infinite;
+        }
+        #inner-a { font-size: 2.5rem; text-shadow: 0 0 15px var(--gold); z-index: 10; }
+
+        /* HUD Display */
+        #display {
+            width: 85%; margin-top: 40px; padding: 20px;
+            background: var(--glass); border-top: 2px solid var(--gold);
+            text-align: center; min-height: 100px; border-radius: 0 0 15px 15px;
+        }
+
+        /* Push-to-Talk Button */
+        #ptt-btn {
+            margin-top: auto; margin-bottom: 40px;
+            width: 80px; height: 80px; border-radius: 50%;
+            background: transparent; border: 3px solid var(--gold);
+            color: var(--gold); font-weight: bold; font-size: 0.8rem;
+            cursor: pointer; box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+            -webkit-user-select: none; user-select: none;
+        }
+        #ptt-btn:active { background: var(--gold); color: black; transform: scale(0.95); }
+
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .listening { box-shadow: 0 0 40px #fff !important; border-color: #fff !important; }
+    </style>
+</head>
+<body>
+
+    <div id="core">
+        <div class="orbit"></div>
+        <div id="inner-a">A</div>
+    </div>
+
+    <div id="display">
+        <div id="status">A.R.T.H.U.R. STANDBY</div>
+        <div id="text">"Ready for duty, Sir."</div>
+    </div>
+
+    <button id="ptt-btn">HOLD TO SPEAK</button>
+
+    <script type="module">
+        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+
+        const API_KEY = "AQ.Ab8RN6K3bQP0Vd-1KuSHOESuxYRytbHV9ab8CsSJT9WglNfsSw"; // PUT YOUR KEY HERE
+        const genAI = new GoogleGenerativeAI(API_KEY);
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-1.5-flash",
+            systemInstruction: "You are ARTHUR, a highly advanced British AI assistant for a medieval-cyberpunk suit of armor. You are refined, formal, and polite. Always call the user 'Sir'. Your tone is calm and efficient, similar to a digital butler or a high-ranking knight's squire. No cowboy slang. Mention armor vitals or tactical data occasionally."
+        });
+
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.continuous = true;
+        
+        const btn = document.getElementById('ptt-btn');
+        const status = document.getElementById('status');
+        const output = document.getElementById('text');
+
+        // PUSH-TO-TALK LOGIC
+        btn.addEventListener('touchstart', () => {
+            recognition.start();
+            btn.classList.add('listening');
+            status.innerText = "LISTENING...";
+        });
+
+        btn.addEventListener('touchend', () => {
+            recognition.stop();
+            btn.classList.remove('listening');
+            status.innerText = "PROCESSING...";
+        });
+
+        recognition.onresult = async (event) => {
+            const transcript = event.results[event.results.length - 1].transcript;
+            output.innerText = `Thinking...`;
+
+            const result = await model.generateContent(transcript);
+            const response = await result.response.text();
+
+            output.innerText = response;
+            speak(response);
+            status.innerText = "A.R.T.H.U.R. ONLINE";
+        };
+
+        function speak(text) {
+            const synth = window.speechSynthesis;
+            const utter = new SpeechSynthesisUtterance(text);
+            
+            // Forces a British voice if available on the iPhone
+            const voices = synth.getVoices();
+            utter.voice = voices.find(v => v.lang === 'en-GB') || voices;
+            utter.pitch = 1.0;
+            utter.rate = 1.0;
+            synth.speak(utter);
+        }
+    </script>
+</body>
+</html>
